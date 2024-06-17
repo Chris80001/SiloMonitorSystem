@@ -1,0 +1,250 @@
+﻿@model IEnumerable<ChillSiloMonitorSystem.Models.NavigationItemWithIcon>
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>歷史紀錄</h2>
+<link href="~/CSS/HistoryBoardSheet.css" rel="stylesheet" />
+
+<div class="container">
+    <div class="toolbar">
+        @(Html.DevExtreme().Toolbar()
+        .Items(items => {
+            items.Add()
+                .Widget(w => w
+                    .Button()
+                    .Icon("menu")
+                    .OnClick("openButton_click")
+                )
+                .Location(ToolbarItemLocation.Before);
+            }
+        )
+    )
+    </div>
+    <div class="drawer">
+        @(Html.DevExtreme().Drawer()
+        .ID("drawer")
+        .OpenedStateMode(DrawerOpenedStateMode.Shrink)
+        .Opened(true)
+        .Position(DrawerPosition.Left)
+        .Height(550)
+        .RevealMode(DrawerRevealMode.Slide)
+        .CloseOnOutsideClick(true)
+        .Content(@<text>
+        <div class="container">
+            <div class="left-content">
+                @(Html.DevExtreme().TreeList()
+                    .ID("employeesA")
+                    .DataSource(new JS("treeList_dataSourcePath"))
+                    .RootValue(-1)
+                    .KeyExpr("Id")
+                    //.ParentIdExpr("Head_ID")
+                    .Columns(columns => {
+                        columns.Add().DataField("StartTime").Caption("啟動時間").DataType(GridColumnDataType.Date).Format("yyyy/MM/dd HH:mm:ss").Width(160);
+                        //columns.Add().DataField("FullName");
+                        columns.Add().DataField("Path").Caption("路徑");
+                        columns.Add().DataField("EndTime").Caption("結束時間").DataType(GridColumnDataType.Date).Format("yyyy/MM/dd HH:mm:ss").Width(160);
+                        //columns.Add().DataField("Mobile_Phone");
+                        //columns.Add()
+                        //    .DataField("Hire_Date")
+                        //    .DataType(GridColumnDataType.Date);
+                    })
+                    .Selection(s => s.Mode(SelectionMode.Single))
+                    .ShowRowLines(true)
+                    .ShowBorders(true)
+                    .ColumnAutoWidth(true)
+                    .ExpandedRowKeys(new[] { 1 })
+                )
+            </div>
+            <div class="right-content">
+                @(Html.DevExtreme().TreeList()
+                    .ID("employeesB")
+                    .DataSource(new JS("treeList_dataSourceException"))
+                    .RootValue(-1)
+                    .KeyExpr("Id")
+                    //.ParentIdExpr("Head_ID")
+                    .Columns(columns => {
+                        columns.Add().DataField("StartTime").Caption("觸發時間").DataType(GridColumnDataType.Date).Format("yyyy/MM/dd HH:mm:ss").Width(160);
+                        //columns.Add().DataField("FullName");
+                        columns.Add().DataField("ExceptionMsg").Caption("異常訊息");
+                        columns.Add().DataField("EndTime").Caption("恢復時間").DataType(GridColumnDataType.Date).Format("yyyy/MM/dd HH:mm:ss").Width(160);
+                        //columns.Add().DataField("Mobile_Phone");
+                        //columns.Add()
+                        //    .DataField("Hire_Date")
+                        //    .DataType(GridColumnDataType.Date);
+                    })
+                    .Selection(s => s.Mode(SelectionMode.Single))
+                    .ShowRowLines(true)
+                    .ShowBorders(true)
+                    .ColumnAutoWidth(true)
+                    .ExpandedRowKeys(new[] { 1 })
+                )
+            </div>
+        </div>
+            </text>)
+        .Template(@<text>
+            <div style="width: 150px">
+                @(Html.DevExtreme().List()
+                    .DataSource(Model)
+                    .HoverStateEnabled(false)
+                    .FocusStateEnabled(false)
+                    .ActiveStateEnabled(false)
+                    .ElementAttr("class", "panel-list ")
+                    .OnItemClick("DrawerClick")
+                    .SelectionMode(ListSelectionMode.Single)
+                )
+            </div>
+        </text>)
+    )
+    </div>
+</div>
+@*<script src="~/Scripts/data/HistoryBoard.js"></script>*@
+<script>
+    //設定TreeList初始屬性
+    $(function () {
+        $("#employeesA").dxTreeList({
+            //設定loadPanel不啟用
+            loadPanel: {
+                enabled: false
+            },
+            scrolling: {
+                mode: "standard" // or "virtual"
+            }
+        });
+        $("#employeesB").dxTreeList({
+            //設定loadPanel不啟用
+            loadPanel: {
+                enabled: false
+            }
+        });
+    });
+
+    function treeList_size_customizeText(e) {
+        if(e.value !== null) {
+            return Math.ceil(e.value / 1024) + " KB";
+        }
+    }
+
+    //Data Get
+    var treeListType = "Dyeing";
+    var treeList_dataSourcePath = {
+        load: async function(options) {
+            return await $.ajax({
+                url: '@Url.Action("TreeListChangePath", "HistoryBoard")',
+                type: "POST",
+                dataType: "json",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    TreeListType: treeListType,
+                }),
+                success: function (data) {
+
+                    //$("#gridContainer").dxDataGrid("instance").option('dataSource', data);
+
+                },
+                error: function (err) {
+
+                }
+            });
+        }
+    };
+    var treeList_dataSourceException = {
+        load: async function(options) {
+            return await $.ajax({
+                url: '@Url.Action("TreeListChangeException", "HistoryBoard")',
+                type: "POST",
+                dataType: "json",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    TreeListType: treeListType,
+                }),
+                success: function (data) {
+
+                    //$("#gridContainer").dxDataGrid("instance").option('dataSource', data);
+
+                },
+                error: function (err) {
+
+                }
+            });
+        }
+    };
+    //重複執行
+    setInterval(function () {
+        asyncTreeListChangePath();
+        asyncTreeListChangeException();
+    }, 5000);
+    async function asyncTreeListChangePath() {
+        result = await $.ajax({
+                url: '@Url.Action("TreeListChangePath", "HistoryBoard")',
+                type: "POST",
+                dataType: "json",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    TreeListType: treeListType,
+                }),
+                success: function (data) {
+
+                    //$("#gridContainer").dxDataGrid("instance").option('dataSource', data);
+                    //treeList_dataSource = data;
+
+                    //$("#employeesA").dxTreeList("instance").option('showPane', false);
+
+                    $("#employeesA").dxTreeList("instance").option('dataSource', data);
+                },
+                error: function (err) {
+
+                }
+            });
+    }
+
+    async function asyncTreeListChangeException() {
+        result = await $.ajax({
+                url: '@Url.Action("TreeListChangeException", "HistoryBoard")',
+                type: "POST",
+                dataType: "json",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    TreeListType: treeListType,
+                }),
+                success: function (data) {
+
+                    //$("#gridContainer").dxDataGrid("instance").option('dataSource', data);
+                    //treeList_dataSource = data;
+
+                    //$("#employeesA").dxTreeList("instance").option('showPane', false);
+
+                    $("#employeesB").dxTreeList("instance").option('dataSource', data);
+                },
+                error: function (err) {
+
+                }
+            });
+    }
+
+    function openButton_click() {
+        var drawer = $("#drawer").dxDrawer("instance");
+        drawer.toggle();
+    }
+    function DrawerClick(e) {
+        //alert(e.itemData.id);
+        treeListType = e.itemData.id;
+        asyncTreeListChangePath();
+        asyncTreeListChangeException();
+        //var data = e.itemData;
+        //var citiesData = data.Cities;
+        //if (citiesData) {
+        //    $("#country-flag").attr("src", data.Flag);
+        //    $("#full-country-name").text(data.FullName);
+        //    $("#country-description").text(data.Description);
+
+        //    $("#country-area").text(data.Area);
+        //    $("#country-population").text(data.Population);
+        //    $("#country-gdp").text("$" + data.GDP);
+
+        //    var tabPanel = $("#tabpanel").dxTabPanel("instance");
+        //    tabPanel.option("dataSource", citiesData);
+        //    tabPanel.option("selectedIndex", 0);
+        //}
+    }
+</script>
